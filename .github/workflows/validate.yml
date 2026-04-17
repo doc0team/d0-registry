@@ -1,0 +1,62 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate registry.json
+        run: |
+          node -e '
+            const fs = require("fs");
+            const raw = fs.readFileSync("registry.json", "utf8");
+            let data;
+            try { data = JSON.parse(raw); }
+            catch (e) { console.error("registry.json is not valid JSON:", e.message); process.exit(1); }
+
+            if (typeof data !== "object" || data === null) {
+              console.error("registry.json must be a JSON object"); process.exit(1);
+            }
+            const entries = Array.isArray(data) ? data : data.entries;
+            if (!Array.isArray(entries)) {
+              console.error("Expected an \"entries\" array (or a top-level array)."); process.exit(1);
+            }
+
+            const seenIds = new Set();
+            let errors = 0;
+            for (const [i, e] of entries.entries()) {
+              const ctx = `entries[${i}]` + (e?.id ? ` (id=${e.id})` : "");
+              if (!e || typeof e !== "object") { console.error(`${ctx}: not an object`); errors++; continue; }
+              if (typeof e.id !== "string" || !/^[a-z0-9][a-z0-9-]*$/.test(e.id)) {
+                console.error(`${ctx}: id must be lowercase-hyphenated`); errors++;
+              } else if (seenIds.has(e.id)) {
+                console.error(`${ctx}: duplicate id "${e.id}"`); errors++;
+              } else {
+                seenIds.add(e.id);
+              }
+              if (e.sourceType !== "url") {
+                console.error(`${ctx}: sourceType must be "url" (got ${JSON.stringify(e.sourceType)})`); errors++;
+              }
+              if (typeof e.source !== "string" || !/^https?:\/\//i.test(e.source)) {
+                console.error(`${ctx}: source must be an http(s) URL`); errors++;
+              }
+              if (e.aliases !== undefined) {
+                if (!Array.isArray(e.aliases) || !e.aliases.every((a) => typeof a === "string")) {
+                  console.error(`${ctx}: aliases must be string[]`); errors++;
+                }
+              }
+              if (e.description !== undefined && typeof e.description !== "string") {
+                console.error(`${ctx}: description must be string`); errors++;
+              }
+            }
+
+            if (errors) { console.error(`\n${errors} problem(s) found.`); process.exit(1); }
+            console.log(`OK — ${entries.length} entries validated.`);
+          '

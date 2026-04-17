@@ -1,0 +1,91 @@
+{
+  "$schema": "https://raw.githubusercontent.com/doc0team/d0-registry/main/schema.json",
+  "version": 1,
+  "description": "Community-curated registry of documentation sources for doc0. The doc0 CLI fetches this file once per 24h and merges it into the local registry. Add entries via pull request.",
+  "entries": [
+    {
+      "id": "stripe",
+      "aliases": ["stripe api", "stripe docs"],
+      "sourceType": "url",
+      "source": "https://docs.stripe.com",
+      "description": "Stripe API documentation"
+    },
+    {
+      "id": "node",
+      "aliases": ["nodejs", "node.js", "node docs"],
+      "sourceType": "url",
+      "source": "https://nodejs.org/docs/latest/api/",
+      "description": "Node.js API reference"
+    },
+    {
+      "id": "anthropic",
+      "aliases": ["claude", "anthropic api", "claude docs"],
+      "sourceType": "url",
+      "source": "https://platform.claude.com/docs",
+      "description": "Anthropic / Claude API documentation"
+    },
+    {
+      "id": "vercel",
+      "aliases": ["vercel docs"],
+      "sourceType": "url",
+      "source": "https://vercel.com/docs",
+      "description": "Vercel platform documentation"
+    },
+    {
+      "id": "nextjs",
+      "aliases": ["next", "next.js", "next js"],
+      "sourceType": "url",
+      "source": "https://nextjs.org/docs",
+      "description": "Next.js framework documentation"
+    },
+    {
+      "id": "prisma",
+      "aliases": ["prisma orm", "prisma docs"],
+      "sourceType": "url",
+      "source": "https://www.prisma.io/docs",
+      "description": "Prisma ORM documentation"
+    },
+    {
+      "id": "supabase",
+      "aliases": ["supabase docs"],
+      "sourceType": "url",
+      "source": "https://supabase.com/docs",
+      "description": "Supabase platform documentation"
+    },
+    {
+      "id": "cloudflare",
+      "aliases": ["cloudflare docs", "workers"],
+      "sourceType": "url",
+      "source": "https://developers.cloudflare.com",
+      "description": "Cloudflare developer documentation"
+    },
+    {
+      "id": "bun",
+      "aliases": ["bun.sh", "bun docs"],
+      "sourceType": "url",
+      "source": "https://bun.sh/docs",
+      "description": "Bun runtime documentation"
+    },
+    {
+      "id": "astro",
+      "aliases": ["astro docs"],
+      "sourceType": "url",
+      "source": "https://docs.astro.build",
+      "description": "Astro framework documentation"
+    },
+    {
+      "id": "svelte",
+      "aliases": ["svelte docs", "sveltekit"],
+      "sourceType": "url",
+      "source": "https://svelte.dev/docs",
+      "description": "Svelte / SvelteKit documentation"
+    },
+    {
+      "id": "shadcn",
+      "aliases": ["shadcn ui", "shadcn/ui"],
+      "sourceType": "url",
+      "source": "https://ui.shadcn.com/docs",
+      "description": "shadcn/ui component documentation"
+    }
+  ]
+}

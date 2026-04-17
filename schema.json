@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/doc0team/d0-registry/main/schema.json",
+  "title": "doc0 community registry",
+  "type": "object",
+  "required": ["entries"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 },
+    "description": { "type": "string" },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/entry" }
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "entry": {
+      "type": "object",
+      "required": ["id", "sourceType", "source"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "description": "Lowercase, hyphen-separated. Matches what users type: `doc0 read stripe`."
+        },
+        "aliases": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Extra strings the CLI matches against. Keep them meaningful (not 'docs', 'api')."
+        },
+        "sourceType": {
+          "type": "string",
+          "enum": ["url"],
+          "description": "Only 'url' is supported in the community registry. Local bundles go through `doc0 add`."
+        },
+        "source": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?://",
+          "description": "The docs root URL. Prefer sites that expose /llms.txt or /llms-full.txt for fast MCP access."
+        },
+        "description": {
+          "type": "string",
+          "description": "Short one-liner. Shows up in `doc0 ls` and MCP `list_docs`."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
