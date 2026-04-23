@@ -46,11 +46,14 @@ jobs:
           if-no-files-found: ignore
 
       - name: Trigger web revalidation
-        if: ${{ secrets.VERCEL_REVALIDATE_TOKEN != '' }}
         env:
           VERCEL_REVALIDATE_TOKEN: ${{ secrets.VERCEL_REVALIDATE_TOKEN }}
           REVALIDATE_URL: https://doc0.sh/api/revalidate
         run: |
+          if [ -z "$VERCEL_REVALIDATE_TOKEN" ]; then
+            echo "VERCEL_REVALIDATE_TOKEN not set; skipping revalidation."
+            exit 0
+          fi
           curl -X POST "$REVALIDATE_URL" \
             -H "content-type: application/json" \
             -d "{\"token\":\"$VERCEL_REVALIDATE_TOKEN\",\"paths\":[\"/registry\",\"/api/bundles\"]}"
