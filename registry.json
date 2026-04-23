@@ -86,6 +86,13 @@
       "sourceType": "url",
       "source": "https://ui.shadcn.com/docs",
       "description": "shadcn/ui component documentation"
+    },
+    {
+      "id": "notra",
+      "aliases": ["notra docs"],
+      "sourceType": "url",
+      "source": "https://docs.usenotra.com",
+      "description": "Documentation for Notra"
     }
   ]
 }
