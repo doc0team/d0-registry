@@ -3,7 +3,7 @@ import { mkdir, readFile, rm, writeFile, cp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
-import tar from "tar";
+import * as tar from "tar";
 import { put } from "@vercel/blob";
 
 const REGISTRY_URL =
