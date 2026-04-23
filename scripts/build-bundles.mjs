@@ -50,28 +50,46 @@ async function fetchRegistry() {
 }
 
 async function ensureIngested(sourceUrl, opts = {}) {
-  const args = [
-    "-y",
-    "doczero@latest",
-    "contrib",
-    "ingest",
-    "url",
-    sourceUrl,
-    "--json",
-    "--max-pages",
-    String(opts.maxPages ?? 50000),
-  ];
-  const chunks = [];
-  await new Promise((resolve, reject) => {
-    const p = spawn("npx", args, { stdio: ["ignore", "pipe", "inherit"], shell: process.platform === "win32" });
-    p.stdout.on("data", (d) => chunks.push(Buffer.from(d)));
-    p.on("exit", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`ingest failed (${sourceUrl}) with ${code}`));
+  const doc0Bin = process.env.D0_DOC0_BIN?.trim();
+  const envMaxRaw = Number.parseInt(process.env.D0_BUILD_MAX_PAGES ?? "", 10);
+  const envMax = Number.isFinite(envMaxRaw) && envMaxRaw > 0 ? envMaxRaw : undefined;
+  const maxPages = String(opts.maxPages ?? envMax ?? 50000);
+  const attempts = doc0Bin
+    ? [
+        ["node", [doc0Bin, "contrib", "ingest", "url", sourceUrl, "--json", "--max-pages", maxPages]],
+        ["node", [doc0Bin, "ingest", "url", sourceUrl, "--json", "--max-pages", maxPages]],
+      ]
+    : [
+        ["npx", ["-y", "doczero@latest", "contrib", "ingest", "url", sourceUrl, "--json", "--max-pages", maxPages]],
+        ["npx", ["-y", "doczero@latest", "ingest", "url", sourceUrl, "--json", "--max-pages", maxPages]],
+      ];
+
+  let lastErr = null;
+  for (const [cmd, args] of attempts) {
+    const chunks = [];
+    const { code } = await new Promise((resolve) => {
+      const p = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"], shell: process.platform === "win32" });
+      p.stdout.on("data", (d) => chunks.push(Buffer.from(d)));
+      p.stderr.on("data", (d) => process.stderr.write(d));
+      p.on("exit", (exitCode) => resolve({ code: exitCode ?? 1 }));
     });
-  });
-  const out = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  return out.storeId;
+    if (code !== 0) {
+      lastErr = new Error(`ingest failed via: ${cmd} ${args.join(" ")} (exit ${code})`);
+      continue;
+    }
+    const raw = Buffer.concat(chunks).toString("utf8").trim();
+    try {
+      const jsonTail = raw.match(/\{[\s\S]*\}\s*$/)?.[0] ?? raw;
+      const out = JSON.parse(jsonTail);
+      if (out?.storeId) return out.storeId;
+      lastErr = new Error(`ingest output missing storeId for ${sourceUrl}`);
+    } catch {
+      const txtStore = raw.match(/store:\s*([a-f0-9]{8,64})/i)?.[1];
+      if (txtStore) return txtStore;
+      lastErr = new Error(`ingest returned non-JSON output for ${sourceUrl}`);
+    }
+  }
+  throw lastErr ?? new Error(`ingest failed (${sourceUrl})`);
 }
 
 async function buildOne(entry, version) {
@@ -165,7 +183,12 @@ async function buildOne(entry, version) {
 
 async function main() {
   await mkdir(OUT_ROOT, { recursive: true });
-  const entries = await fetchRegistry();
+  const onlyId = process.env.D0_BUILD_ONLY_ID?.trim().toLowerCase();
+  const allEntries = await fetchRegistry();
+  const entries = onlyId ? allEntries.filter((e) => e.id === onlyId) : allEntries;
+  if (onlyId && entries.length === 0) {
+    throw new Error(`D0_BUILD_ONLY_ID=${onlyId} was not found in registry`);
+  }
   const index = { builtAt: new Date().toISOString(), entries: {} };
 
   for (const entry of entries) {
