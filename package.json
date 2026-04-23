@@ -1,0 +1,12 @@
+{
+  "name": "d0-registry-build",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:bundles": "node scripts/build-bundles.mjs"
+  },
+  "dependencies": {
+    "@vercel/blob": "^0.27.0",
+    "tar": "^7.4.3"
+  }
+}

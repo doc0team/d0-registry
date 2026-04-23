@@ -1,0 +1,56 @@
+name: Build Hosted Bundles
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  push:
+    branches: [main]
+    paths:
+      - "registry.json"
+      - "schema.json"
+      - "scripts/build-bundles.mjs"
+      - "package.json"
+      - ".github/workflows/build-bundles.yml"
+  workflow_dispatch:
+
+jobs:
+  build-bundles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build hosted bundle artifacts
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          D0_REGISTRY_URL: https://raw.githubusercontent.com/doc0team/d0-registry/main/registry.json
+          D0_CDN_BASE_URL: https://doc0.sh/cdn
+        run: npm run build:bundles
+
+      - name: Upload local artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hosted-bundle-artifacts
+          path: .artifacts/
+          if-no-files-found: ignore
+
+      - name: Trigger web revalidation
+        if: ${{ secrets.VERCEL_REVALIDATE_TOKEN != '' }}
+        env:
+          VERCEL_REVALIDATE_TOKEN: ${{ secrets.VERCEL_REVALIDATE_TOKEN }}
+          REVALIDATE_URL: https://doc0.sh/api/revalidate
+        run: |
+          curl -X POST "$REVALIDATE_URL" \
+            -H "content-type: application/json" \
+            -d "{\"token\":\"$VERCEL_REVALIDATE_TOKEN\",\"paths\":[\"/registry\",\"/api/bundles\"]}"

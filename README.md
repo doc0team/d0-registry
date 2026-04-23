@@ -40,8 +40,33 @@ A GitHub Action validates the JSON shape on every PR.
 | `sourceType`  | yes      | Always `"url"` in the community registry. Bundles are installed locally via `doc0 add`.     |
 | `source`      | yes      | The docs root URL. Prefer sites that expose `/llms.txt` or `/llms-full.txt`.                |
 | `description` | no       | Short one-liner. Shows up in `doc0 ls` and MCP `list_docs`.                                 |
+| `version`     | no       | Optional source version tag (docs release/date/commit-ish).                                  |
+| `versions`    | no       | Optional explicit version list for hosted bundles (for example `["18","17"]`).              |
+| `build`       | no       | Hosted build overrides: `disabled`, `maxPages`, `locale`.                                    |
+| `embedModel`  | no       | Optional embedding model hint for hosted hybrid retrieval.                                    |
 
 See [`schema.json`](./schema.json) for the full JSON Schema (editor completion).
+
+## Hosted artifact format
+
+The scheduled bundle builder emits one immutable `.d0.tgz` per `(id, version)` and publishes a pointer index consumed by both `doc0` CLI and `doc0.sh`.
+
+Tarball layout:
+
+```text
+<sha>.d0.tgz
+├── d0.json
+├── manifest.json
+├── pages/
+│   └── p_<sha>.md
+├── vectors.f32
+└── vectors.meta.json
+```
+
+- `d0.json`: synthetic bundle manifest (`name: "@doc0/<id>"`, pinned `version`, `structure` map).
+- `manifest.json`: doc-store manifest produced by URL ingest.
+- `pages/*`: normalized markdown pages.
+- `vectors.f32` + `vectors.meta.json`: embedding index payload for hybrid retrieval.
 
 ## Why a single JSON file
 

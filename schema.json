@@ -43,6 +43,45 @@
         "description": {
           "type": "string",
           "description": "Short one-liner. Shows up in `doc0 ls` and MCP `list_docs`."
+        },
+        "versions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Optional explicit versions (e.g. [\"18\", \"17\"]). Builder emits one artifact per version."
+        },
+        "build": {
+          "type": "object",
+          "description": "Optional builder overrides for hosted bundle generation.",
+          "properties": {
+            "disabled": {
+              "type": "boolean",
+              "description": "When true, skip hosted bundle generation for this entry."
+            },
+            "maxPages": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Override max pages ingested for this source (0 means no cap beyond discovery limits)."
+            },
+            "locale": {
+              "type": "string",
+              "description": "Optional locale hint passed to the ingest pipeline (e.g. \"en\", \"pt-br\")."
+            }
+          },
+          "additionalProperties": false
+        },
+        "version": {
+          "type": "string",
+          "description": "Optional source version tag (docs release, date, or commit-ish)."
+        },
+        "snapshotUrl": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?://",
+          "description": "Optional immutable snapshot URL for reproducible retrieval."
+        },
+        "embedModel": {
+          "type": "string",
+          "description": "Optional embedding model hint for hosted hybrid retrieval."
         }
       },
       "additionalProperties": false
