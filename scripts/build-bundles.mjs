@@ -53,40 +53,46 @@ async function ensureIngested(sourceUrl, opts = {}) {
   const doc0Bin = process.env.D0_DOC0_BIN?.trim();
   const envMaxRaw = Number.parseInt(process.env.D0_BUILD_MAX_PAGES ?? "", 10);
   const envMax = Number.isFinite(envMaxRaw) && envMaxRaw > 0 ? envMaxRaw : undefined;
-  const maxPages = String(opts.maxPages ?? envMax ?? 50000);
-  const attempts = doc0Bin
+  const initialMax = opts.maxPages ?? envMax ?? 50000;
+  const fallbackCaps = [initialMax, 20000, 5000, 1000]
+    .filter((n, i, arr) => Number.isFinite(n) && n > 0 && arr.indexOf(n) === i);
+
+  const commandPairs = doc0Bin
     ? [
-        ["node", [doc0Bin, "contrib", "ingest", "url", sourceUrl, "--json", "--max-pages", maxPages]],
-        ["node", [doc0Bin, "ingest", "url", sourceUrl, "--json", "--max-pages", maxPages]],
+        ["node", [doc0Bin, "contrib", "ingest", "url", sourceUrl, "--json"]],
+        ["node", [doc0Bin, "ingest", "url", sourceUrl, "--json"]],
       ]
     : [
-        ["npx", ["-y", "doczero@latest", "contrib", "ingest", "url", sourceUrl, "--json", "--max-pages", maxPages]],
-        ["npx", ["-y", "doczero@latest", "ingest", "url", sourceUrl, "--json", "--max-pages", maxPages]],
+        ["npx", ["-y", "doczero@latest", "contrib", "ingest", "url", sourceUrl, "--json"]],
+        ["npx", ["-y", "doczero@latest", "ingest", "url", sourceUrl, "--json"]],
       ];
 
   let lastErr = null;
-  for (const [cmd, args] of attempts) {
-    const chunks = [];
-    const { code } = await new Promise((resolve) => {
-      const p = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"], shell: process.platform === "win32" });
-      p.stdout.on("data", (d) => chunks.push(Buffer.from(d)));
-      p.stderr.on("data", (d) => process.stderr.write(d));
-      p.on("exit", (exitCode) => resolve({ code: exitCode ?? 1 }));
-    });
-    if (code !== 0) {
-      lastErr = new Error(`ingest failed via: ${cmd} ${args.join(" ")} (exit ${code})`);
-      continue;
-    }
-    const raw = Buffer.concat(chunks).toString("utf8").trim();
-    try {
-      const jsonTail = raw.match(/\{[\s\S]*\}\s*$/)?.[0] ?? raw;
-      const out = JSON.parse(jsonTail);
-      if (out?.storeId) return out.storeId;
-      lastErr = new Error(`ingest output missing storeId for ${sourceUrl}`);
-    } catch {
-      const txtStore = raw.match(/store:\s*([a-f0-9]{8,64})/i)?.[1];
-      if (txtStore) return txtStore;
-      lastErr = new Error(`ingest returned non-JSON output for ${sourceUrl}`);
+  for (const maxPages of fallbackCaps) {
+    for (const [cmd, baseArgs] of commandPairs) {
+      const args = [...baseArgs, "--max-pages", String(maxPages)];
+      const chunks = [];
+      const { code } = await new Promise((resolve) => {
+        const p = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"], shell: process.platform === "win32" });
+        p.stdout.on("data", (d) => chunks.push(Buffer.from(d)));
+        p.stderr.on("data", (d) => process.stderr.write(d));
+        p.on("exit", (exitCode) => resolve({ code: exitCode ?? 1 }));
+      });
+      if (code !== 0) {
+        lastErr = new Error(`ingest failed via: ${cmd} ${args.join(" ")} (exit ${code})`);
+        continue;
+      }
+      const raw = Buffer.concat(chunks).toString("utf8").trim();
+      try {
+        const jsonTail = raw.match(/\{[\s\S]*\}\s*$/)?.[0] ?? raw;
+        const out = JSON.parse(jsonTail);
+        if (out?.storeId) return out.storeId;
+        lastErr = new Error(`ingest output missing storeId for ${sourceUrl}`);
+      } catch {
+        const txtStore = raw.match(/store:\s*([a-f0-9]{8,64})/i)?.[1];
+        if (txtStore) return txtStore;
+        lastErr = new Error(`ingest returned non-JSON output for ${sourceUrl}`);
+      }
     }
   }
   throw lastErr ?? new Error(`ingest failed (${sourceUrl})`);
